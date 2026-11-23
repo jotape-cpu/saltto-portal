@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saltto - Sistema de Gestão Acadêmica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #doc-modal, #doc-modal * { visibility: visible; }
+            #doc-modal { position: absolute; left: 0; top: 0; width: 100%; background: #ffffff; }
+            #doc-modal > div { border: none; box-shadow: none; background: #ffffff; max-width: 100%; }
+            #doc-modal-body { background: #ffffff; color: #000000; border: 1px solid #000000; }
+            #doc-modal-body * { color: #000000 !important; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 font-sans min-h-screen">
+
+    <div id="toast-box" class="fixed top-4 right-4 z-[60] space-y-2 w-[90vw] max-w-sm"></div>
+
+    <div id="login-view" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center font-black text-zinc-950 text-xl">S</div>
+                <div>
+                    <h1 class="text-2xl font-extrabold text-white">Saltto</h1>
+                    <p class="text-xs text-zinc-400">Portal Institucional Integrado</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mb-5 bg-zinc-950 p-1 rounded-lg border border-zinc-800">
+                <button id="tab-login" onclick="mostrarAbaLogin('login')" class="py-2 rounded-md text-xs font-bold transition">Entrar</button>
+                <button id="tab-primeiro" onclick="mostrarAbaLogin('primeiro')" class="py-2 rounded-md text-xs font-bold transition">Primeiro Acesso (Criar Senha)</button>
+            </div>
+
+            <form id="form-login" onsubmit="fazerLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 uppercase mb-1">Matrícula ou ID Institucional</label>
+                    <input type="text" id="login-user" required autocomplete="username" placeholder="Ex: 20261064, PROF-2026-0001 ou ADM-2026-0001" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 uppercase mb-1">Senha</label>
+                    <input type="password" id="login-pass" required autocomplete="current-password" placeholder="••••••••" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                </div>
+                <p id="login-error" class="text-xs text-red-400 hidden"></p>
+                <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:opacity-90 text-zinc-950 font-extrabold py-2.5 rounded-lg text-sm transition">Entrar na Plataforma</button>
+
+                <div class="pt-4 border-t border-zinc-800">
+                    <p class="text-[11px] text-zinc-500 uppercase font-bold mb-2.5">Acessos Rápidos de Demonstração</p>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="preencherLogin('ADM-2026-0001', 'admin123')" class="bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 py-2 px-2 rounded-lg text-xs text-amber-400 font-semibold transition">Admin</button>
+                        <button type="button" onclick="preencherLogin('PROF-2026-0001', 'prof123')" class="bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 py-2 px-2 rounded-lg text-xs text-cyan-400 font-semibold transition">Professor</button>
+                        <button type="button" onclick="preencherLogin('20261064', 'aluno123')" class="bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 py-2 px-2 rounded-lg text-xs text-emerald-400 font-semibold transition">Aluno</button>
+                    </div>
+                </div>
+            </form>
+
+            <form id="form-primeiro" onsubmit="fazerPrimeiroAcesso(event)" class="space-y-4 hidden">
+                <p class="text-xs text-zinc-400">Informe sua matrícula/ID, o código de ativação entregue pela secretaria e crie sua própria senha.</p>
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 uppercase mb-1">Matrícula ou ID Institucional</label>
+                    <input type="text" id="pa-user" required placeholder="Ex: 20261065" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-zinc-400 uppercase mb-1">Código de Ativação</label>
+                    <input type="text" id="pa-code" required maxlength="6" placeholder="6 caracteres" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-white font-mono uppercase tracking-widest focus:outline-none focus:border-emerald-500"/>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 uppercase mb-1">Nova Senha</label>
+                        <input type="password" id="pa-pass" required minlength="6" autocomplete="new-password" placeholder="Mín. 6 caracteres" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 uppercase mb-1">Confirmar</label>
+                        <input type="password" id="pa-pass2" required minlength="6" autocomplete="new-password" placeholder="Repita a senha" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                    </div>
+                </div>
+                <p id="pa-error" class="text-xs text-red-400 hidden"></p>
+                <button type="submit" class="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 hover:opacity-90 text-zinc-950 font-extrabold py-2.5 rounded-lg text-sm transition">Ativar Conta e Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-view" class="hidden min-h-screen flex-col md:flex-row">
+        <aside class="w-full md:w-64 md:h-screen md:sticky md:top-0 md:overflow-y-auto bg-zinc-900 border-b md:border-b-0 md:border-r border-zinc-800 flex flex-col justify-between p-5 shrink-0">
+            <div>
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center font-black text-zinc-950 text-lg">S</div>
+                    <div>
+                        <h1 class="font-extrabold text-lg text-white">Saltto</h1>
+                        <p class="text-[11px] text-zinc-400 uppercase tracking-wider" id="role-badge">Portal</p>
+                    </div>
+                </div>
+                <nav id="sidebar-nav" class="space-y-1.5"></nav>
+            </div>
+
+            <div class="mt-8 pt-4 border-t border-zinc-800 space-y-3">
+                <div class="bg-zinc-950 p-3 rounded-lg border border-zinc-800">
+                    <p class="text-xs font-bold text-white break-words" id="user-nome">---</p>
+                    <p class="text-[11px] text-zinc-400 mt-0.5 break-all" id="user-mat">---</p>
+                </div>
+                <button onclick="abrirModalSenha()" class="w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 py-2 rounded-lg text-xs font-bold transition">Alterar Minha Senha</button>
+                <button onclick="fazerLogout()" class="w-full bg-zinc-800 hover:bg-red-950/60 hover:text-red-400 text-zinc-300 py-2 rounded-lg text-xs font-bold transition">Sair da Conta</button>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-6 md:p-8 overflow-y-auto max-w-6xl mx-auto w-full min-w-0">
+            <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-zinc-800">
+                <div>
+                    <h2 class="text-2xl font-bold text-white" id="main-title">Painel</h2>
+                    <p class="text-sm text-zinc-400" id="main-subtitle">Saltto Gestão Educacional</p>
+                </div>
+                <button onclick="toggleChat(true)" class="bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 px-4 py-2 rounded-lg text-sm font-semibold transition self-start">Assistente Saltto</button>
+            </header>
+            <div id="dynamic-content"></div>
+        </main>
+    </div>
+
+    <div id="senha-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+        <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3 mb-4">
+                <h4 class="font-bold text-lg text-emerald-400">Alterar Minha Senha</h4>
+                <button onclick="fecharModal('senha-modal')" class="text-zinc-400 hover:text-white font-bold">X</button>
+            </div>
+            <form onsubmit="alterarSenha(event)" class="space-y-3">
+                <input type="password" id="sn-atual" required autocomplete="current-password" placeholder="Senha atual" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                <input type="password" id="sn-nova" required minlength="6" autocomplete="new-password" placeholder="Nova senha (mín. 6 caracteres)" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                <input type="password" id="sn-conf" required minlength="6" autocomplete="new-password" placeholder="Confirmar nova senha" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"/>
+                <p id="sn-error" class="text-xs text-red-400 hidden"></p>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="fecharModal('senha-modal')" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Cancelar</button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Salvar Nova Senha</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="doc-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+        <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-xl w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3 mb-4 no-print">
+                <h4 class="font-bold text-lg text-emerald-400">Declaração Oficial de Matrícula</h4>
+                <button onclick="fecharModal('doc-modal')" class="text-zinc-400 hover:text-white font-bold">X</button>
+            </div>
+            <div id="doc-modal-body" class="bg-zinc-950 border border-zinc-800 p-5 rounded-lg text-sm text-zinc-300 space-y-3 font-mono"></div>
+            <div class="mt-5 flex justify-end gap-3 no-print">
+                <button onclick="window.print()" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Imprimir / PDF</button>
+                <button onclick="fecharModal('doc-modal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="info-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50">
+        <div class="bg-zinc-900 border border-zinc-700 rounded-xl max-w-md w-full p-6 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3 mb-4">
+                <h4 class="font-bold text-lg text-emerald-400" id="info-modal-title">Informação</h4>
+                <button onclick="fecharModal('info-modal')" class="text-zinc-400 hover:text-white font-bold">X</button>
+            </div>
+            <div id="info-modal-body" class="text-sm text-zinc-300 space-y-3"></div>
+            <div class="mt-5 flex justify-end">
+                <button onclick="fecharModal('info-modal')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-xs font-bold">Entendi</button>
+            </div>
+        </div>
+    </div>
+
+    <button onclick="toggleChat()" id="chat-fab" class="hidden fixed bottom-6 right-6 bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 font-extrabold px-5 py-3.5 rounded-full shadow-2xl z-40">Assistente Saltto</button>
+
+    <div id="chat-widget" class="fixed bottom-20 right-6 w-[92vw] max-w-md bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl hidden flex-col overflow-hidden z-50 h-[450px]">
+        <div class="bg-zinc-950 px-4 py-3 border-b border-zinc-800 flex justify-between items-center">
+            <h4 class="font-bold text-sm text-cyan-400">Assistente Virtual Saltto</h4>
+            <button onclick="toggleChat(false)" class="text-zinc-400 hover:text-white text-xs font-bold">Fechar</button>
+        </div>
+        <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 text-sm bg-zinc-950/60">
+            <div class="bg-zinc-800 border border-zinc-700 p-3 rounded-xl max-w-[85%] text-zinc-200">
+                Olá! Como posso ajudar hoje? Pergunte sobre notas, IRA, frequência, requerimentos, atestados, Primeiro Acesso ou declarações.
+            </div>
+        </div>
+        <div class="p-3 bg-zinc-950 border-t border-zinc-800 flex gap-2">
+            <input type="text" id="chat-input" placeholder="Escreva sua dúvida..." class="flex-1 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500" onkeypress="if(event.key==='Enter') enviarChat()"/>
+            <button onclick="enviarChat()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded-lg text-sm">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        let appState = null;
+        let secaoAtual = null;
+
+        const INP = 'w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500';
+        const CARD = 'bg-zinc-900 border border-zinc-800 rounded-xl p-6';
+        const SUB = 'bg-zinc-950 border border-zinc-800 rounded-lg';
+        const BTN_EM = 'bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-sm';
+        const BTN_CY = 'bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg text-sm';
+        const BTN_RED = 'bg-red-600/80 hover:bg-red-600 text-white font-bold rounded text-xs';
+        const NAV_BASE = 'sec-btn w-full text-left px-3.5 py-2.5 rounded-lg text-sm font-medium text-zinc-400 hover:bg-zinc-800 transition';
+        const NAV_ACTIVE = 'sec-btn w-full text-left px-3.5 py-2.5 rounded-lg text-sm font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+
+        function esc(s) {
+            return String(s === null || s === undefined ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+        }
+
+        function fmtData(iso) {
+            const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+            return m ? `${m[3]}/${m[2]}/${m[1]}` : esc(iso);
+        }
+
+        function hojeISO() {
+            return new Date().toLocaleDateString('en-CA');
+        }
+
+        function badge(status) {
+            const cores = {
+                'Deferido': 'bg-emerald-500/10 text-emerald-400',
+                'Aprovado': 'bg-emerald-500/10 text-emerald-400',
+                'Indeferido': 'bg-red-500/10 text-red-400',
+                'Pendente': 'bg-amber-500/10 text-amber-400',
+                'Em Análise': 'bg-amber-500/10 text-amber-400',
+                'Cursando': 'bg-cyan-500/10 text-cyan-400'
+            };
+            return `<span class="px-2.5 py-1 text-xs font-bold rounded ${cores[status] || 'bg-zinc-800 text-zinc-200'}">${esc(status)}</span>`;
+        }
+
+        function toast(msg, tipo) {
+            const box = document.getElementById('toast-box');
+            const el = document.createElement('div');
+            const cor = tipo === 'erro' ? 'border-red-500/40 bg-red-950/90 text-red-200' : 'border-emerald-500/40 bg-emerald-950/90 text-emerald-200';
+            el.className = `border rounded-lg px-4 py-3 text-sm shadow-xl ${cor}`;
+            el.textContent = msg;
+            box.appendChild(el);
+            setTimeout(() => el.remove(), 4500);
+        }
+
+        async function api(url, opts) {
+            const res = await fetch(url, opts);
+            let data = null;
+            try { data = await res.json(); } catch (e) { data = null; }
+            if (!res.ok) {
+                if (res.status === 401 && appState) { location.reload(); }
+                let msg = 'Erro ao processar a solicitação';
+                if (data && typeof data.detail === 'string') msg = data.detail;
+                else if (data && Array.isArray(data.detail)) msg = 'Dados inválidos. Verifique os campos preenchidos.';
+                throw new Error(msg);
+            }
+            return data;
+        }
+
+        function jpost(url, body) {
+            return api(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+        }
+
+        async function acao(fn, okMsg, secao) {
+            try {
+                const r = await fn();
+                if (okMsg) toast(okMsg);
+                if (secao) await recarregar(secao);
+                return r;
+            } catch (e) {
+                toast(e.message, 'erro');
+            }
+        }
+
+        function abrirModal(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('hidden');
+            m.classList.add('flex');
+        }
+
+        function fecharModal(id) {
+            const m = document.getElementById(id);
+            m.classList.add('hidden');
+            m.classList.remove('flex');
+        }
+
+        function mostrarInfo(titulo, html) {
+            document.getElementById('info-modal-title').textContent = titulo;
+            document.getElementById('info-modal-body').innerHTML = html;
+            abrirModal('info-modal');
+        }
+
+        function mostrarAbaLogin(aba) {
+            const ativo = 'py-2 rounded-md text-xs font-bold transition bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+            const inativo = 'py-2 rounded-md text-xs font-bold transition text-zinc-400 hover:text-white';
+            document.getElementById('tab-login').className = aba === 'login' ? ativo : inativo;
+            document.getElementById('tab-primeiro').className = aba === 'primeiro' ? ativo : inativo;
+            document.getElementById('form-login').classList.toggle('hidden', aba !== 'login');
+            document.getElementById('form-primeiro').classList.toggle('hidden', aba !== 'primeiro');
+        }
+
+        function preencherLogin(u, p) {
+            document.getElementById('login-user').value = u;
+            document.getElementById('login-pass').value = p;
+        }
+
+        async function fazerLogin(e) {
+            e.preventDefault();
+            const err = document.getElementById('login-error');
+            err.classList.add('hidden');
+            try {
+                await jpost('/api/login', {
+                    username: document.getElementById('login-user').value,
+                    password: document.getElementById('login-pass').value
+                });
+                await inicializarApp();
+            } catch (ex) {
+                err.textContent = ex.message;
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function fazerPrimeiroAcesso(e) {
+            e.preventDefault();
+            const err = document.getElementById('pa-error');
+            err.classList.add('hidden');
+            try {
+                await jpost('/api/primeiro-acesso', {
+                    username: document.getElementById('pa-user').value,
+                    codigo_ativacao: document.getElementById('pa-code').value,
+                    password: document.getElementById('pa-pass').value,
+                    confirmar_password: document.getElementById('pa-pass2').value
+                });
+                await inicializarApp();
+                toast('Conta ativada com sucesso! Bem-vindo(a) ao Saltto.');
+            } catch (ex) {
+                err.textContent = ex.message;
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function fazerLogout() {
+            await fetch('/api/logout', {method: 'POST'});
+            location.reload();
+        }
+
+        function abrirModalSenha() {
+            ['sn-atual', 'sn-nova', 'sn-conf'].forEach(id => { document.getElementById(id).value = ''; });
+            document.getElementById('sn-error').classList.add('hidden');
+            abrirModal('senha-modal');
+        }
+
+        async function alterarSenha(e) {
+            e.preventDefault();
+            const err = document.getElementById('sn-error');
+            err.classList.add('hidden');
+            try {
+                await jpost('/api/alterar-senha', {
+                    senha_atual: document.getElementById('sn-atual').value,
+                    nova_senha: document.getElementById('sn-nova').value,
+                    confirmar_senha: document.getElementById('sn-conf').value
+                });
+                fecharModal('senha-modal');
+                toast('Senha alterada com sucesso!');
+                if (appState) appState.user.primeiro_acesso = false;
+            } catch (ex) {
+                err.textContent = ex.message;
+                err.classList.remove('hidden');
+            }
+        }
+
+        async function inicializarApp() {
+            let res;
+            try {
+                res = await fetch('/api/me');
+            } catch (e) {
+                res = null;
+            }
+            if (!res || !res.ok) {
+                document.getElementById('login-view').classList.remove('hidden');
+                document.getElementById('login-view').classList.add('flex');
+                document.getElementById('app-view').classList.add('hidden');
+                document.getElementById('app-view').classList.remove('flex');
+                document.getElementById('chat-fab').classList.add('hidden');
+                mostrarAbaLogin('login');
+                return;
+            }
+            appState = await res.json();
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('flex');
+            document.getElementById('app-view').classList.remove('hidden');
+            document.getElementById('app-view').classList.add('flex');
+            document.getElementById('chat-fab').classList.remove('hidden');
+            renderApp(null);
+            if (appState.user.primeiro_acesso) {
+                toast('Sua conta usa uma senha provisória. Defina uma nova senha em "Alterar Minha Senha".');
+            }
+        }
+
+        async function recarregar(secao) {
+            appState = await api('/api/me');
+            renderApp(secao || secaoAtual);
+        }
+
+        function renderApp(secao) {
+            const u = appState.user;
+            document.getElementById('user-nome').textContent = u.nome;
+            document.getElementById('user-mat').textContent = (u.role === 'aluno' ? 'Matrícula: ' : 'ID: ') + u.username;
+            document.getElementById('main-subtitle').textContent = u.curso + ' • ' + u.campus;
+            if (u.role === 'admin') renderAdmin(secao);
+            else if (u.role === 'professor') renderProfessor(secao);
+            else renderAluno(secao);
+        }
+
+        function setMenu(items, secao) {
+            const ids = items.map(i => i.id);
+            const alvo = ids.includes(secao) ? secao : items[0].id;
+            document.getElementById('sidebar-nav').innerHTML = items.map(it => `
+                <button onclick="abrirSecao('${it.id}')" id="nav-${it.id}" class="${NAV_BASE}">${esc(it.label)}</button>
+            `).join('');
+            abrirSecao(alvo);
+        }
+
+        function abrirSecao(id) {
+            secaoAtual = id;
+            document.querySelectorAll('.sec-panel').forEach(p => p.classList.add('hidden'));
+            const target = document.getElementById('sec-' + id);
+            if (target) target.classList.remove('hidden');
+            document.querySelectorAll('.sec-btn').forEach(b => { b.className = NAV_BASE; });
+            const active = document.getElementById('nav-' + id);
+            if (active) active.className = NAV_ACTIVE;
+        }
+
+        function htmlAvisos(avisos) {
+            if (!avisos.length) return '<p class="text-sm text-zinc-400">Nenhum aviso publicado.</p>';
+            return avisos.map(a => `
+                <div class="${SUB} p-4">
+                    <div class="flex flex-wrap justify-between gap-2">
+                        <span class="text-[11px] font-bold ${a.turma_nome === 'Institucional' ? 'text-amber-400' : 'text-cyan-400'}">${esc(a.turma_nome)}</span>
+                        <span class="text-[11px] text-zinc-500">${esc(a.criado_em)}</span>
+                    </div>
+                    <p class="font-bold text-sm text-white mt-1">${esc(a.titulo)}</p>
+                    <p class="text-sm text-zinc-300 mt-1 whitespace-pre-line">${esc(a.conteudo)}</p>
+                    <p class="text-[11px] text-zinc-500 mt-2">Publicado por ${esc(a.autor)}</p>
+                </div>
+            `).join('');
+        }
+
+        function htmlEventos(eventos, corTipo) {
+            if (!eventos.length) return '<p class="text-sm text-zinc-400">Nenhum evento no calendário.</p>';
+            return `<div class="grid grid-cols-1 md:grid-cols-3 gap-4">${eventos.map(ev => `
+                <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-xl">
+                    <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-purple-500/10 text-purple-400">${fmtData(ev.data)} • ${esc(ev.tipo)}</span>
+                    <h4 class="font-bold text-sm text-white mt-2">${esc(ev.titulo)}</h4>
+                    <p class="text-xs text-cyan-400 mt-0.5">${esc(ev.turma_nome)}</p>
+                    ${ev.descricao ? `<p class="text-xs text-zinc-400 mt-2">${esc(ev.descricao)}</p>` : ''}
+                </div>
+            `).join('')}</div>`;
+        }
+
+        function mostrarModalDeclaracao(d) {
+            const lista = d.disciplinas.length > 0 ? d.disciplinas.map(x => `• ${esc(x)}`).join('<br>') : 'Nenhuma disciplina vinculada ainda.';
+            document.getElementById('doc-modal-body').innerHTML = `
+                <p class="text-center font-bold text-white">SALTTO • SISTEMA DE GESTÃO EDUCACIONAL</p>
+                <p class="text-center font-bold text-white">DECLARAÇÃO DE MATRÍCULA</p>
+                <p>Declaramos para os devidos fins que <b>${esc(d.nome)}</b>, matrícula nº <b>${esc(d.matricula)}</b>, está regularmente matriculado(a) no curso <b>${esc(d.curso)}</b> (${esc(d.campus)}).</p>
+                <div class="pt-2 border-t border-zinc-800"><b>Componentes Curriculares:</b><br>${lista}</div>
+                <p class="text-xs text-zinc-500 pt-2">Emitido em ${esc(d.data_emissao)} • Código de verificação: <b>${esc(d.codigo_verificacao)}</b></p>
+            `;
+            abrirModal('doc-modal');
+        }
+
+        function renderAdmin(secao) {
+            document.getElementById('role-badge').textContent = 'Setor Administrativo';
+            document.getElementById('main-title').textContent = 'Gestão Acadêmica Institucional';
+            const s = appState.estatisticas;
+            const profOptions = appState.professores.map(p => `<option value="${p.id}">${esc(p.nome)} (${esc(p.username)})</option>`).join('');
+            const alunoOptions = appState.alunos.map(a => `<option value="${a.id}">${esc(a.username)} - ${esc(a.nome)}</option>`).join('');
+            const turmaOptions = appState.turmas.map(t => `<option value="${t.id}">${esc(t.codigo)} - ${esc(t.nome)}</option>`).join('');
+            const rotulos = {admin: 'Administrador', professor: 'Professor', aluno: 'Aluno'};
+
+            document.getElementById('dynamic-content').innerHTML = `
+                <div id="sec-resumo" class="sec-panel space-y-6">
+                    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div class="${CARD}"><p class="text-xs text-zinc-400 uppercase font-semibold">Alunos</p><p class="text-3xl font-extrabold text-emerald-400 mt-1">${s.alunos}</p></div>
+                        <div class="${CARD}"><p class="text-xs text-zinc-400 uppercase font-semibold">Professores</p><p class="text-3xl font-extrabold text-cyan-400 mt-1">${s.professores}</p></div>
+                        <div class="${CARD}"><p class="text-xs text-zinc-400 uppercase font-semibold">Turmas</p><p class="text-3xl font-extrabold text-white mt-1">${s.turmas}</p></div>
+                        <div class="${CARD}"><p class="text-xs text-zinc-400 uppercase font-semibold">Atestados Pendentes</p><p class="text-3xl font-extrabold text-amber-400 mt-1">${s.atestados_pendentes}</p></div>
+                        <div class="${CARD}"><p class="text-xs text-zinc-400 uppercase font-semibold">Requerimentos em Análise</p><p class="text-3xl font-extrabold text-amber-400 mt-1">${s.requerimentos_em_analise}</p></div>
+                    </div>
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-white mb-3">Últimos Avisos</h3>
+                        <div class="space-y-2.5">${htmlAvisos(appState.avisos.slice(0, 3))}</div>
+                    </div>
+                </div>
+
+                <div id="sec-usuarios" class="sec-panel hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="${CARD} lg:col-span-1">
+                            <h3 class="text-lg font-bold text-emerald-400 mb-4">Cadastrar Usuário</h3>
+                            <form onsubmit="adminCriarUser(event)" class="space-y-3">
+                                <select id="adm-role" onchange="atualizarDicaId()" class="${INP}">
+                                    <option value="aluno">Perfil: Aluno</option>
+                                    <option value="professor">Perfil: Professor</option>
+                                    <option value="admin">Perfil: Administrador</option>
+                                </select>
+                                <input type="text" id="adm-nome" required placeholder="Nome Completo" class="${INP}"/>
+                                <input type="text" id="adm-user" placeholder="Matrícula/ID (vazio = gerar automático)" class="${INP}"/>
+                                <p id="adm-dica" class="text-[11px] text-zinc-500">Formato: 8 dígitos AAAAXXXX (ex: 20261064)</p>
+                                <input type="email" id="adm-email" placeholder="E-mail (opcional)" class="${INP}"/>
+                                <input type="text" id="adm-pass" placeholder="Senha inicial (vazio = senha provisória)" class="${INP}"/>
+                                <input type="text" id="adm-curso" placeholder="Curso / Departamento (opcional)" class="${INP}"/>
+                                <button type="submit" class="w-full ${BTN_EM} py-2.5">Criar Registro e Acesso</button>
+                            </form>
+                        </div>
+
+                        <div class="${CARD} lg:col-span-2">
+                            <h3 class="text-lg font-bold text-cyan-400 mb-4">Usuários Cadastrados (${appState.usuarios.length})</h3>
+                            <div class="overflow-x-auto max-h-[28rem] overflow-y-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-zinc-950 text-zinc-400 text-xs uppercase sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2">ID / Matrícula</th>
+                                            <th class="px-3 py-2">Nome</th>
+                                            <th class="px-3 py-2">Perfil</th>
+                                            <th class="px-3 py-2">Ativação</th>
+                                            <th class="px-3 py-2 text-right">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-zinc-800">
+                                        ${appState.usuarios.map(u => `
+                                            <tr>
+                                                <td class="px-3 py-2 font-mono text-emerald-400 whitespace-nowrap">${esc(u.username)}</td>
+                                                <td class="px-3 py-2 text-white">${esc(u.nome)}</td>
+                                                <td class="px-3 py-2 text-zinc-400">${rotulos[u.role] || esc(u.role)}</td>
+                                                <td class="px-3 py-2 text-xs whitespace-nowrap">
+                                                    <span class="font-mono text-amber-400">${esc(u.codigo_ativacao)}</span>
+                                                    ${u.primeiro_acesso ? '<span class="ml-1 text-amber-400">(aguardando)</span>' : '<span class="ml-1 text-emerald-400">(ativa)</span>'}
+                                                </td>
+                                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                    ${u.role === 'aluno' ? `<button onclick="emitirDeclaracaoAdmin(${u.id})" class="bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 px-2.5 py-1 rounded text-xs font-bold">Declaração</button>` : ''}
+                                                    ${u.id !== appState.user.id ? `<button onclick="adminExcluirUser(${u.id})" class="${BTN_RED} px-2.5 py-1">Excluir</button>` : ''}
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sec-turmas" class="sec-panel hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="${CARD}">
+                            <h3 class="text-lg font-bold text-white mb-4">Criar Nova Turma</h3>
+                            <form onsubmit="adminCriarTurma(event)" class="space-y-3">
+                                <div class="grid grid-cols-3 gap-2">
+                                    <input type="text" id="t-cod" required placeholder="Código (INF03)" class="${INP}"/>
+                                    <input type="number" id="t-ch" value="60" min="1" required placeholder="Carga horária" class="${INP}"/>
+                                    <input type="text" id="t-per" value="2026.2" required placeholder="Período" class="${INP}"/>
+                                </div>
+                                <input type="text" id="t-nome" required placeholder="Nome da Disciplina / Turma" class="${INP}"/>
+                                <select id="t-prof" class="${INP}">${profOptions}</select>
+                                <button type="submit" class="w-full ${BTN_EM} py-2.5">Criar Turma</button>
+                            </form>
+                        </div>
+                        <div class="${CARD}">
+                            <h3 class="text-lg font-bold text-white mb-4">Enturmar Aluno em Disciplina</h3>
+                            <form onsubmit="adminMatricularTurma(event)" class="space-y-3">
+                                <select id="mt-aluno" class="${INP}">${alunoOptions}</select>
+                                <select id="mt-turma" class="${INP}">${turmaOptions}</select>
+                                <button type="submit" class="w-full ${BTN_CY} py-2.5">Confirmar Enturmação</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-white mb-3">Turmas Ativas</h3>
+                        ${appState.turmas.length === 0 ? '<p class="text-sm text-zinc-400">Nenhuma turma cadastrada.</p>' : ''}
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            ${appState.turmas.map(t => `
+                                <div class="${SUB} p-4">
+                                    <div class="flex justify-between items-start gap-2">
+                                        <span class="text-xs font-bold text-emerald-400">${esc(t.codigo)} • ${t.carga_horaria}h • ${esc(t.periodo)}</span>
+                                        <button onclick="adminExcluirTurma(${t.id})" class="${BTN_RED} px-2 py-0.5">Excluir</button>
+                                    </div>
+                                    <p class="font-bold text-sm text-white mt-1">${esc(t.nome)}</p>
+                                    <p class="text-xs text-zinc-400 mt-1">Docente: ${esc(t.professor_nome)}</p>
+                                    <p class="text-xs text-cyan-400 mt-2 font-semibold">${t.total_alunos} aluno(s) matriculado(s)</p>
+                                    <ul class="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                                        ${t.alunos.map(a => `<li class="text-xs text-zinc-300"><span class="font-mono text-emerald-400">${esc(a.matricula)}</span> ${esc(a.nome)}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sec-horarios" class="sec-panel hidden space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-white mb-4">Organizar Horários das Turmas</h3>
+                        <form onsubmit="adminCriarHorario(event)" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+                            <select id="h-turma" class="${INP}">${turmaOptions}</select>
+                            <select id="h-dia" class="${INP}">
+                                <option>Segunda-feira</option><option>Terça-feira</option><option>Quarta-feira</option><option>Quinta-feira</option><option>Sexta-feira</option><option>Sábado</option>
+                            </select>
+                            <input type="time" id="h-ini" value="08:00" required class="${INP}"/>
+                            <input type="time" id="h-fim" value="10:00" required class="${INP}"/>
+                            <input type="text" id="h-sala" required placeholder="Sala / Laboratório" class="${INP}"/>
+                            <button type="submit" class="md:col-span-5 ${BTN_EM} py-2">Salvar Horário</button>
+                        </form>
+                    </div>
+                    ${appState.horarios.length === 0 ? '<p class="text-sm text-zinc-400">Nenhum horário cadastrado.</p>' : ''}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        ${appState.horarios.map(h => `
+                            <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-xl">
+                                <div class="flex justify-between items-start gap-2">
+                                    <span class="text-xs font-bold text-cyan-400">${esc(h.dia_semana)}</span>
+                                    <button onclick="adminExcluirHorario(${h.id})" class="${BTN_RED} px-2 py-0.5">Excluir</button>
+                                </div>
+                                <p class="font-bold text-sm text-white mt-1">${esc(h.turma_nome)}</p>
+                                <p class="text-xs text-zinc-400 mt-2">${esc(h.hora_inicio)} às ${esc(h.hora_fim)} • <span class="text-emerald-400">${esc(h.sala)}</span></p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div id="sec-atestados" class="sec-panel hidden">
+                    <div class="${CARD} space-y-3">
+                        <h3 class="text-lg font-bold text-white mb-2">Protocolos de Atestados Médicos</h3>
+                        ${appState.atestados.length === 0 ? '<p class="text-sm text-zinc-400">Nenhum atestado enviado.</p>' : appState.atestados.map(at => `
+                            <div class="${SUB} p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-bold text-white">${esc(at.aluno_nome)} (${esc(at.aluno_matricula)})</p>
+                                    <p class="text-xs text-zinc-400">Início: ${fmtData(at.data_inicio)} • ${at.dias} dia(s) • Motivo: ${esc(at.motivo)}</p>
+                                    <a href="${esc(at.arquivo_caminho)}" target="_blank" class="text-xs text-cyan-400 underline mt-1 inline-block">Ver Anexo (${esc(at.arquivo_nome)})</a>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    ${badge(at.status)}
+                                    <button onclick="avaliarAtestado(${at.id}, 'Deferido')" class="${BTN_EM} px-3 py-1 text-xs">Deferir</button>
+                                    <button onclick="avaliarAtestado(${at.id}, 'Indeferido')" class="${BTN_RED} px-3 py-1">Indeferir</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div id="sec-requerimentos" class="sec-panel hidden">
+                    <div class="${CARD} space-y-3">
+                        <h3 class="text-lg font-bold text-white mb-2">Requerimentos e Protocolos dos Alunos</h3>
+                        ${appState.requerimentos.length === 0 ? '<p class="text-sm text-zinc-400">Nenhum requerimento aberto.</p>' : appState.requerimentos.map(r => `
+                            <div class="${SUB} p-4 space-y-3">
+                                <div class="flex flex-wrap justify-between gap-2">
+                                    <div>
+                                        <p class="text-sm font-bold text-white">#${r.id} • ${esc(r.tipo)}</p>
+                                        <p class="text-xs text-zinc-400">${esc(r.aluno_nome)} (${esc(r.aluno_matricula)}) • ${esc(r.criado_em)}</p>
+                                    </div>
+                                    ${badge(r.status)}
+                                </div>
+                                <p class="text-sm text-zinc-300 whitespace-pre-line">${esc(r.justificativa)}</p>
+                                <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+                                    <select id="rq-st-${r.id}" class="${INP}">
+                                        ${['Em Análise', 'Deferido', 'Indeferido'].map(st => `<option value="${st}" ${st === r.status ? 'selected' : ''}>${st}</option>`).join('')}
+                                    </select>
+                                    <input type="text" id="rq-pr-${r.id}" value="${esc(r.parecer)}" placeholder="Parecer da secretaria" class="md:col-span-2 ${INP}"/>
+                                    <button onclick="responderRequerimento(${r.id})" class="${BTN_CY} py-2">Responder</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div id="sec-avisos" class="sec-panel hidden space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-amber-400 mb-4">Publicar Comunicado Geral</h3>
+                        <form onsubmit="adminPublicarAviso(event)" class="space-y-3">
+                            <input type="text" id="av-titulo" required placeholder="Título do comunicado" class="${INP}"/>
+                            <textarea id="av-conteudo" rows="3" required placeholder="Conteúdo do comunicado" class="${INP}"></textarea>
+                            <button type="submit" class="${BTN_EM} px-6 py-2.5">Publicar no Mural</button>
+                        </form>
+                    </div>
+                    <div class="${CARD} space-y-3">
+                        <h3 class="text-lg font-bold text-white">Mural de Avisos</h3>
+                        ${htmlAvisos(appState.avisos)}
+                    </div>
+                </div>
+
+                <div id="sec-auditoria" class="sec-panel hidden">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-white mb-4">Trilha de Auditoria (últimos 200 registros)</h3>
+                        <div class="overflow-x-auto max-h-[34rem] overflow-y-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-zinc-950 text-zinc-400 text-xs uppercase sticky top-0">
+                                    <tr>
+                                        <th class="px-3 py-2">Data/Hora</th>
+                                        <th class="px-3 py-2">Ator</th>
+                                        <th class="px-3 py-2">Ação</th>
+                                        <th class="px-3 py-2">Detalhes</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-800">
+                                    ${appState.auditoria.map(l => `
+                                        <tr>
+                                            <td class="px-3 py-2 text-zinc-400 whitespace-nowrap">${esc(l.data_hora)}</td>
+                                            <td class="px-3 py-2 font-mono text-emerald-400 whitespace-nowrap">${esc(l.ator)}</td>
+                                            <td class="px-3 py-2 text-cyan-400 whitespace-nowrap">${esc(l.acao)}</td>
+                                            <td class="px-3 py-2 text-zinc-300">${esc(l.detalhes)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            setMenu([
+                {id: 'resumo', label: 'Visão Geral'},
+                {id: 'usuarios', label: 'Usuários & Declarações'},
+                {id: 'turmas', label: 'Turmas & Enturmação'},
+                {id: 'horarios', label: 'Organizar Horários'},
+                {id: 'atestados', label: 'Atestados Recebidos'},
+                {id: 'requerimentos', label: 'Requerimentos'},
+                {id: 'avisos', label: 'Mural de Avisos'},
+                {id: 'auditoria', label: 'Trilha de Auditoria'}
+            ], secao);
+        }
+
+        function atualizarDicaId() {
+            const dicas = {
+                aluno: 'Formato: 8 dígitos AAAAXXXX (ex: 20261064)',
+                professor: 'Formato: PROF-AAAA-XXXX (ex: PROF-2026-0001)',
+                admin: 'Formato: ADM-AAAA-XXXX (ex: ADM-2026-0001)'
+            };
+            document.getElementById('adm-dica').textContent = dicas[document.getElementById('adm-role').value];
+        }
+
+        async function adminCriarUser(e) {
+            e.preventDefault();
+            await acao(async () => {
+                const d = await jpost('/api/admin/users', {
+                    role: document.getElementById('adm-role').value,
+                    nome: document.getElementById('adm-nome').value,
+                    username: document.getElementById('adm-user').value,
+                    email: document.getElementById('adm-email').value,
+                    password: document.getElementById('adm-pass').value,
+                    curso: document.getElementById('adm-curso').value
+                });
+                mostrarInfo('Usuário criado com sucesso', `
+                    <p><b>${esc(d.nome)}</b></p>
+                    <div class="${SUB} p-3 space-y-1.5">
+                        <p>Matrícula/ID: <span class="font-mono text-emerald-400 text-base">${esc(d.username)}</span></p>
+                        <p>Código de ativação: <span class="font-mono text-amber-400 text-base">${esc(d.codigo_ativacao)}</span></p>
+                        ${d.senha_provisoria ? `<p>Senha provisória: <span class="font-mono text-cyan-400 text-base">${esc(d.senha_provisoria)}</span></p>` : '<p class="text-zinc-400">Senha inicial definida pelo administrador.</p>'}
+                    </div>
+                    <p class="text-xs text-zinc-400">${d.primeiro_acesso ? 'O usuário deve usar a aba "Primeiro Acesso (Criar Senha)" com a matrícula/ID e o código de ativação.' : 'O usuário já pode entrar com a matrícula/ID e a senha informada.'}</p>
+                `);
+            }, null, 'usuarios');
+            await recarregar('usuarios');
+        }
+
+        async function adminExcluirUser(id) {
+            if (!confirm('Excluir este usuário e todos os registros vinculados a ele?')) return;
+            await acao(() => api(`/api/admin/users/${id}`, {method: 'DELETE'}), 'Usuário excluído.', 'usuarios');
+        }
+
+        async function adminCriarTurma(e) {
+            e.preventDefault();
+            await acao(() => jpost('/api/admin/turmas', {
+                codigo: document.getElementById('t-cod').value,
+                nome: document.getElementById('t-nome').value,
+                carga_horaria: parseInt(document.getElementById('t-ch').value),
+                periodo: document.getElementById('t-per').value,
+                professor_id: parseInt(document.getElementById('t-prof').value)
+            }), 'Turma criada com sucesso!', 'turmas');
+        }
+
+        async function adminExcluirTurma(id) {
+            if (!confirm('Excluir esta turma com matrículas, horários, atividades e avisos vinculados?')) return;
+            await acao(() => api(`/api/admin/turmas/${id}`, {method: 'DELETE'}), 'Turma excluída.', 'turmas');
+        }
+
+        async function adminMatricularTurma(e) {
+            e.preventDefault();
+            await acao(() => jpost('/api/admin/matricular-turma', {
+                aluno_id: parseInt(document.getElementById('mt-aluno').value),
+                turma_id: parseInt(document.getElementById('mt-turma').value)
+            }), 'Aluno enturmado com sucesso!', 'turmas');
+        }
+
+        async function adminCriarHorario(e) {
+            e.preventDefault();
+            await acao(() => jpost('/api/admin/horarios', {
+                turma_id: parseInt(document.getElementById('h-turma').value),
+                dia_semana: document.getElementById('h-dia').value,
+                hora_inicio: document.getElementById('h-ini').value,
+                hora_fim: document.getElementById('h-fim').value,
+                sala: document.getElementById('h-sala').value
+            }), 'Horário salvo.', 'horarios');
+        }
+
+        async function adminExcluirHorario(id) {
+            if (!confirm('Excluir este horário?')) return;
+            await acao(() => api(`/api/admin/horarios/${id}`, {method: 'DELETE'}), 'Horário excluído.', 'horarios');
+        }
+
+        async function avaliarAtestado(id, status) {
+            await acao(() => jpost(`/api/admin/atestados/${id}/status`, {status}), `Atestado ${status.toLowerCase()}.`, 'atestados');
+        }
+
+        async function responderRequerimento(id) {
+            await acao(() => jpost(`/api/admin/requerimentos/${id}/responder`, {
+                status: document.getElementById(`rq-st-${id}`).value,
+                parecer: document.getElementById(`rq-pr-${id}`).value
+            }), 'Requerimento respondido.', 'requerimentos');
+        }
+
+        async function adminPublicarAviso(e) {
+            e.preventDefault();
+            await acao(() => jpost('/api/admin/avisos', {
+                titulo: document.getElementById('av-titulo').value,
+                conteudo: document.getElementById('av-conteudo').value
+            }), 'Comunicado publicado.', 'avisos');
+        }
+
+        async function emitirDeclaracaoAdmin(alunoId) {
+            await acao(async () => {
+                const d = await api(`/api/admin/declaracao/${alunoId}`);
+                mostrarModalDeclaracao(d);
+            });
+        }
+
+        function renderProfessor(secao) {
+            document.getElementById('role-badge').textContent = 'Portal do Docente';
+            document.getElementById('main-title').textContent = 'Diário de Classe e Atividades';
+            const turmaOpts = appState.turmas.map(t => `<option value="${t.id}">${esc(t.codigo)} - ${esc(t.nome)}</option>`).join('');
+            const semTurmas = appState.turmas.length === 0;
+            const aviso = '<p class="text-sm text-zinc-400">Você ainda não possui turmas vinculadas. Procure a secretaria.</p>';
+
+            document.getElementById('dynamic-content').innerHTML = `
+                <div id="sec-frequencia" class="sec-panel space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-emerald-400 mb-4">Lançar Frequência e Notas</h3>
+                        ${semTurmas ? aviso : `
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                <select id="prof-turma-sel" onchange="carregarAlunosTurma()" class="${INP}">${turmaOpts}</select>
+                                <input type="date" id="prof-freq-data" value="${hojeISO()}" class="${INP}"/>
+                                <button onclick="salvarFrequencia()" class="${BTN_EM} py-2">Salvar Chamada do Dia</button>
+                            </div>
+                            <p class="text-[11px] text-zinc-500 mb-3">As notas N1 e N2 são salvas individualmente em cada aluno. A média 7,0 ou mais aprova o aluno.</p>
+                            <div id="lista-chamada" class="space-y-2"></div>
+                        `}
+                    </div>
+                </div>
+
+                <div id="sec-atividades" class="sec-panel hidden space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-cyan-400 mb-4">Postar Atividade ou Material de Apoio</h3>
+                        ${semTurmas ? aviso : `
+                            <form onsubmit="profPostarAtividade(event)" class="space-y-3">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <select id="at-turma" class="${INP}">${turmaOpts}</select>
+                                    <select id="at-tipo" class="${INP}">
+                                        <option value="Atividade">Atividade Avaliativa</option>
+                                        <option value="Material">Material / Conteúdo</option>
+                                    </select>
+                                    <input type="date" id="at-data" class="${INP}"/>
+                                </div>
+                                <input type="text" id="at-titulo" required placeholder="Título da Atividade ou Conteúdo" class="${INP}"/>
+                                <textarea id="at-desc" rows="2" placeholder="Instruções para os alunos..." class="${INP}"></textarea>
+                                <input type="file" id="at-file" class="block w-full text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-600 file:text-white"/>
+                                <button type="submit" class="${BTN_CY} px-6 py-2.5">Publicar na Turma</button>
+                            </form>
+                        `}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="${CARD}">
+                            <h4 class="font-bold text-white mb-3">Publicações Realizadas</h4>
+                            <div class="space-y-2.5">
+                                ${appState.atividades.length === 0 ? '<p class="text-xs text-zinc-400">Nenhuma publicação.</p>' : appState.atividades.map(a => `
+                                    <div class="${SUB} p-3.5">
+                                        <span class="text-[11px] font-bold text-cyan-400">${esc(a.turma_nome)} • ${esc(a.tipo)}${a.data_entrega ? ' • Entrega: ' + fmtData(a.data_entrega) : ''}</span>
+                                        <p class="font-bold text-sm text-white mt-0.5">${esc(a.titulo)}</p>
+                                        <p class="text-xs text-zinc-400 mt-1">${esc(a.descricao)}</p>
+                                        ${a.arquivo_caminho ? `<a href="${esc(a.arquivo_caminho)}" target="_blank" class="text-xs text-emerald-400 underline mt-1 inline-block">Anexo: ${esc(a.arquivo_nome)}</a>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="${CARD}">
+                            <h4 class="font-bold text-white mb-3">Entregas Recebidas dos Alunos</h4>
+                            <div class="space-y-2.5">
+                                ${appState.entregas.length === 0 ? '<p class="text-xs text-zinc-400">Nenhuma entrega enviada ainda.</p>' : appState.entregas.map(e => `
+                                    <div class="${SUB} p-3.5">
+                                        <p class="text-xs font-bold text-emerald-400">${esc(e.atividade_titulo)}</p>
+                                        <p class="text-sm font-bold text-white">${esc(e.aluno_nome)} (${esc(e.aluno_matricula)})</p>
+                                        <p class="text-[11px] text-zinc-500">${esc(e.enviado_em)}</p>
+                                        <p class="text-xs text-zinc-400 mt-1">${e.comentario ? esc(e.comentario) : 'Sem observações'}</p>
+                                        ${e.arquivo_caminho ? `<a href="${esc(e.arquivo_caminho)}" target="_blank" class="text-xs text-cyan-400 underline mt-1 inline-block">Baixar Arquivo (${esc(e.arquivo_nome)})</a>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sec-calendario" class="sec-panel hidden space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-purple-400 mb-4">Agendar Prova ou Avaliação no Calendário</h3>
+                        ${semTurmas ? aviso : `
+                            <form onsubmit="profCriarEvento(event)" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <select id="ev-turma" class="${INP}">${turmaOpts}</select>
+                                <select id="ev-tipo" class="${INP}">
+                                    <option value="Prova">Prova / Avaliação</option>
+                                    <option value="Atividade">Entrega de Trabalho</option>
+                                </select>
+                                <input type="date" id="ev-data" required class="${INP}"/>
+                                <input type="text" id="ev-titulo" required placeholder="Título do Evento" class="${INP}"/>
+                                <input type="text" id="ev-desc" placeholder="Descrição (opcional)" class="md:col-span-4 ${INP}"/>
+                                <button type="submit" class="md:col-span-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded-lg text-sm">Adicionar ao Calendário Acadêmico</button>
+                            </form>
+                        `}
+                    </div>
+                    ${htmlEventos(appState.eventos)}
+                </div>
+
+                <div id="sec-avisos" class="sec-panel hidden space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-amber-400 mb-4">Publicar Aviso para a Turma</h3>
+                        ${semTurmas ? aviso : `
+                            <form onsubmit="profPublicarAviso(event)" class="space-y-3">
+                                <select id="avt-turma" class="${INP}">${turmaOpts}</select>
+                                <input type="text" id="avt-titulo" required placeholder="Título do aviso" class="${INP}"/>
+                                <textarea id="avt-conteudo" rows="3" required placeholder="Conteúdo do aviso" class="${INP}"></textarea>
+                                <button type="submit" class="${BTN_EM} px-6 py-2.5">Publicar Aviso</button>
+                            </form>
+                        `}
+                    </div>
+                    <div class="${CARD} space-y-3">
+                        <h3 class="text-lg font-bold text-white">Mural de Avisos</h3>
+                        ${htmlAvisos(appState.avisos)}
+                    </div>
+                </div>
+            `;
+
+            setMenu([
+                {id: 'frequencia', label: 'Frequência & Notas'},
+                {id: 'atividades', label: 'Atividades & Arquivos'},
+                {id: 'calendario', label: 'Calendário de Provas'},
+                {id: 'avisos', label: 'Avisos da Turma'}
+            ], secao);
+
+            if (!semTurmas) carregarAlunosTurma();
+        }
+
+        async function carregarAlunosTurma() {
+            const sel = document.getElementById('prof-turma-sel');
+            const box = document.getElementById('lista-chamada');
+            if (!sel || !box) return;
+            const tid = sel.value;
+            try {
+                const alunos = await api(`/api/professor/turma/${tid}/alunos`);
+                if (alunos.length === 0) {
+                    box.innerHTML = '<p class="text-sm text-zinc-400">Nenhum aluno matriculado nesta turma.</p>';
+                    return;
+                }
+                box.innerHTML = alunos.map(a => `
+                    <div class="${SUB} p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-bold text-white">${esc(a.nome)}</p>
+                            <p class="text-xs text-zinc-400">Matrícula: ${esc(a.matricula)}</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <label class="flex items-center gap-1.5 text-xs font-bold text-emerald-400 cursor-pointer">
+                                <input type="checkbox" class="freq-chk w-4 h-4 accent-emerald-500" data-aluno="${a.aluno_id}" checked/> Presente
+                            </label>
+                            <div class="flex items-center gap-1.5">
+                                <input type="number" step="0.1" min="0" max="10" id="n1-${a.aluno_id}" value="${a.nota1}" title="Nota 1" class="w-16 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white"/>
+                                <input type="number" step="0.1" min="0" max="10" id="n2-${a.aluno_id}" value="${a.nota2}" title="Nota 2" class="w-16 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-white"/>
+                                <button onclick="salvarNota(${tid}, ${a.aluno_id})" class="${BTN_CY} px-2.5 py-1 text-xs">Salvar Nota</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                toast(e.message, 'erro');
+            }
+        }
+
+        async function salvarFrequencia() {
+            const tid = parseInt(document.getElementById('prof-turma-sel').value);
+            const data = document.getElementById('prof-freq-data').value;
+            if (!data) { toast('Informe a data da chamada.', 'erro'); return; }
+            const registros = Array.from(document.querySelectorAll('.freq-chk')).map(chk => ({
+                aluno_id: parseInt(chk.dataset.aluno),
+                presente: chk.checked
+            }));
+            await acao(() => jpost('/api/professor/frequencia', {turma_id: tid, data, registros}), 'Chamada registrada com sucesso!');
+        }
+
+        async function salvarNota(turmaId, alunoId) {
+            const nota1 = parseFloat(document.getElementById(`n1-${alunoId}`).value);
+            const nota2 = parseFloat(document.getElementById(`n2-${alunoId}`).value);
+            if (isNaN(nota1) || isNaN(nota2) || nota1 < 0 || nota1 > 10 || nota2 < 0 || nota2 > 10) {
+                toast('As notas devem estar entre 0 e 10.', 'erro');
+                return;
+            }
+            await acao(() => jpost('/api/professor/notas', {turma_id: turmaId, aluno_id: alunoId, nota1, nota2}), 'Notas atualizadas com sucesso!');
+        }
+
+        async function profPostarAtividade(e) {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('turma_id', document.getElementById('at-turma').value);
+            fd.append('tipo', document.getElementById('at-tipo').value);
+            fd.append('data_entrega', document.getElementById('at-data').value);
+            fd.append('titulo', document.getElementById('at-titulo').value);
+            fd.append('descricao', document.getElementById('at-desc').value);
+            const fileInput = document.getElementById('at-file');
+            if (fileInput.files.length > 0) fd.append('arquivo', fileInput.files[0]);
+            await acao(() => api('/api/professor/atividades', {method: 'POST', body: fd}), 'Publicação realizada com sucesso!', 'atividades');
+        }
+
+        async function profCriarEvento(e) {
+            e.preventDefault();
+            await acao(() => jpost('/api/professor/calendario', {
+                turma_id: parseInt(document.getElementById('ev-turma').value),
+                tipo: document.getElementById('ev-tipo').value,
+                data: document.getElementById('ev-data').value,
+                titulo: document.getElementById('ev-titulo').value,
+                descricao: document.getElementById('ev-desc').value
+            }), 'Evento adicionado ao calendário!', 'calendario');
+        }
+
+        async function profPublicarAviso(e) {
+            e.preventDefault();
+            await acao(() => jpost('/api/professor/avisos', {
+                turma_id: parseInt(document.getElementById('avt-turma').value),
+                titulo: document.getElementById('avt-titulo').value,
+                conteudo: document.getElementById('avt-conteudo').value
+            }), 'Aviso publicado para a turma!', 'avisos');
+        }
+
+        function renderAluno(secao) {
+            document.getElementById('role-badge').textContent = 'Portal do Estudante';
+            document.getElementById('main-title').textContent = 'Área Acadêmica do Aluno';
+            const tiposReq = appState.tipos_requerimento.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+
+            document.getElementById('dynamic-content').innerHTML = `
+                <div id="sec-resumo" class="sec-panel space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl">
+                            <p class="text-xs text-zinc-400 uppercase font-semibold">IRA Geral</p>
+                            <p class="text-3xl font-extrabold text-emerald-400 mt-1">${appState.ira.toFixed(2)}</p>
+                        </div>
+                        <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl">
+                            <p class="text-xs text-zinc-400 uppercase font-semibold">Frequência Global</p>
+                            <p class="text-3xl font-extrabold text-cyan-400 mt-1">${appState.frequencia_geral}%</p>
+                        </div>
+                        <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl flex flex-col justify-between">
+                            <p class="text-xs text-zinc-400 uppercase font-semibold">Secretaria Digital</p>
+                            <button onclick="emitirDeclaracaoAluno()" class="mt-2 ${BTN_EM} py-2 px-3 text-xs">Emitir Declaração de Matrícula</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                        <div class="p-4 border-b border-zinc-800 font-bold text-white">Boletim e Frequência por Turma</div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-zinc-950 text-zinc-400 text-xs uppercase">
+                                    <tr>
+                                        <th class="px-4 py-3">Turma</th>
+                                        <th class="px-4 py-3">Docente</th>
+                                        <th class="px-4 py-3 text-center">N1</th>
+                                        <th class="px-4 py-3 text-center">N2</th>
+                                        <th class="px-4 py-3 text-center">Média</th>
+                                        <th class="px-4 py-3 text-center">Freq.</th>
+                                        <th class="px-4 py-3 text-right">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-zinc-800">
+                                    ${appState.disciplinas.length === 0 ? '<tr><td colspan="7" class="px-4 py-4 text-zinc-400">Você ainda não está matriculado em nenhuma turma.</td></tr>' : appState.disciplinas.map(d => `
+                                        <tr>
+                                            <td class="px-4 py-3 font-bold text-white">${esc(d.codigo)} - ${esc(d.nome)}</td>
+                                            <td class="px-4 py-3 text-zinc-400">${esc(d.professor)}</td>
+                                            <td class="px-4 py-3 text-center">${d.nota1.toFixed(1)}</td>
+                                            <td class="px-4 py-3 text-center">${d.nota2.toFixed(1)}</td>
+                                            <td class="px-4 py-3 text-center font-bold text-emerald-400">${d.media.toFixed(2)}</td>
+                                            <td class="px-4 py-3 text-center text-cyan-400">${d.frequencia}% (${d.faltas} falta(s))</td>
+                                            <td class="px-4 py-3 text-right">${badge(d.status)}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="${CARD}">
+                        <h3 class="font-bold text-white mb-3">Meus Horários de Aula</h3>
+                        ${appState.horarios.length === 0 ? '<p class="text-sm text-zinc-400">Nenhum horário cadastrado para suas turmas.</p>' : ''}
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            ${appState.horarios.map(h => `
+                                <div class="${SUB} p-3.5">
+                                    <span class="text-xs font-bold text-cyan-400">${esc(h.dia_semana)}</span>
+                                    <p class="font-bold text-sm text-white mt-0.5">${esc(h.disciplina)}</p>
+                                    <p class="text-xs text-zinc-400 mt-1">${esc(h.hora_inicio)} - ${esc(h.hora_fim)} • <span class="text-emerald-400">${esc(h.sala)}</span></p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="${CARD}">
+                        <h3 class="font-bold text-white mb-3">Avisos Recentes</h3>
+                        <div class="space-y-2.5">${htmlAvisos(appState.avisos.slice(0, 3))}</div>
+                    </div>
+                </div>
+
+                <div id="sec-atividades" class="sec-panel hidden space-y-4">
+                    <h3 class="text-lg font-bold text-white">Atividades e Conteúdos das Minhas Turmas</h3>
+                    ${appState.atividades.length === 0 ? '<p class="text-sm text-zinc-400">Nenhuma atividade postada nas suas turmas.</p>' : appState.atividades.map(a => `
+                        <div class="bg-zinc-900 border border-zinc-800 p-5 rounded-xl space-y-3">
+                            <div class="flex flex-wrap justify-between items-center gap-2">
+                                <span class="text-xs font-bold text-cyan-400">${esc(a.turma_nome)} • ${esc(a.tipo)}</span>
+                                <span class="text-xs text-zinc-400">${a.data_entrega ? 'Entrega até: ' + fmtData(a.data_entrega) : (a.tipo === 'Material' ? 'Material de Estudo' : 'Sem prazo definido')}</span>
+                            </div>
+                            <h4 class="text-base font-bold text-white">${esc(a.titulo)}</h4>
+                            <p class="text-sm text-zinc-400 whitespace-pre-line">${esc(a.descricao)}</p>
+                            ${a.arquivo_caminho ? `<a href="${esc(a.arquivo_caminho)}" target="_blank" class="inline-block bg-zinc-950 border border-zinc-700 px-3 py-1.5 rounded-lg text-xs text-emerald-400 font-bold">Baixar Material (${esc(a.arquivo_nome)})</a>` : ''}
+                            ${a.tipo === 'Atividade' ? `
+                                <div class="pt-3 border-t border-zinc-800 space-y-2">
+                                    ${a.entregue ? `<span class="text-xs font-bold text-emerald-400">Entregue em ${esc(a.entrega_info)} (você pode reenviar abaixo)</span>` : ''}
+                                    <form onsubmit="entregarAtividadeAluno(event, ${a.id})" class="flex flex-col sm:flex-row gap-2">
+                                        <input type="text" id="ent-com-${a.id}" placeholder="Resposta ou comentário..." class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-white"/>
+                                        <input type="file" id="ent-file-${a.id}" class="text-xs text-zinc-400"/>
+                                        <button type="submit" class="${BTN_EM} px-4 py-1.5 text-xs">${a.entregue ? 'Reenviar Entrega' : 'Enviar Entrega'}</button>
+                                    </form>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div id="sec-calendario" class="sec-panel hidden space-y-4">
+                    <h3 class="text-lg font-bold text-white">Calendário Acadêmico, Provas e Entregas</h3>
+                    ${htmlEventos(appState.eventos)}
+                </div>
+
+                <div id="sec-atestados" class="sec-panel hidden space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-emerald-400 mb-4">Anexar Atestado Médico / Justificativa</h3>
+                        <form onsubmit="enviarAtestadoAluno(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input type="date" id="ats-data" required class="${INP}"/>
+                            <input type="number" id="ats-dias" min="1" value="1" required placeholder="Qtd. Dias" class="${INP}"/>
+                            <input type="file" id="ats-file" required class="text-xs text-zinc-400 bg-zinc-950 border border-zinc-800 rounded-lg p-1.5"/>
+                            <input type="text" id="ats-motivo" required placeholder="Descrição / Motivo do afastamento" class="md:col-span-3 ${INP}"/>
+                            <button type="submit" class="md:col-span-3 ${BTN_EM} py-2.5">Protocolar Atestado</button>
+                        </form>
+                    </div>
+                    <div class="${CARD} space-y-3">
+                        <h4 class="font-bold text-white">Meus Atestados Enviados</h4>
+                        ${appState.atestados.length === 0 ? '<p class="text-xs text-zinc-400">Nenhum atestado protocolado.</p>' : appState.atestados.map(at => `
+                            <div class="${SUB} p-3.5 flex justify-between items-center gap-3">
+                                <div>
+                                    <p class="text-sm font-bold text-white">${esc(at.motivo)} (${at.dias} dia(s) a partir de ${fmtData(at.data_inicio)})</p>
+                                    <a href="${esc(at.arquivo_caminho)}" target="_blank" class="text-xs text-cyan-400 underline">${esc(at.arquivo_nome)}</a>
+                                </div>
+                                ${badge(at.status)}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div id="sec-requerimentos" class="sec-panel hidden space-y-6">
+                    <div class="${CARD}">
+                        <h3 class="text-lg font-bold text-purple-400 mb-4">Abrir Requerimento Digital</h3>
+                        <form onsubmit="abrirRequerimento(event)" class="space-y-3">
+                            <select id="rq-tipo" class="${INP}">${tiposReq}</select>
+                            <textarea id="rq-just" rows="3" required placeholder="Justificativa do requerimento" class="${INP}"></textarea>
+                            <button type="submit" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-6 py-2.5 rounded-lg text-sm">Protocolar Requerimento</button>
+                        </form>
+                    </div>
+                    <div class="${CARD} space-y-3">
+                        <h4 class="font-bold text-white">Meus Requerimentos</h4>
+                        ${appState.requerimentos.length === 0 ? '<p class="text-xs text-zinc-400">Nenhum requerimento aberto.</p>' : appState.requerimentos.map(r => `
+                            <div class="${SUB} p-4 space-y-1.5">
+                                <div class="flex flex-wrap justify-between gap-2">
+                                    <p class="text-sm font-bold text-white">#${r.id} • ${esc(r.tipo)}</p>
+                                    ${badge(r.status)}
+                                </div>
+                                <p class="text-[11px] text-zinc-500">${esc(r.criado_em)}</p>
+                                <p class="text-sm text-zinc-300 whitespace-pre-line">${esc(r.justificativa)}</p>
+                                ${r.parecer ? `<p class="text-xs text-cyan-400 pt-1 border-t border-zinc-800">Parecer da secretaria: ${esc(r.parecer)}</p>` : '<p class="text-xs text-zinc-500">Aguardando parecer da secretaria.</p>'}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div id="sec-avisos" class="sec-panel hidden">
+                    <div class="${CARD} space-y-3">
+                        <h3 class="text-lg font-bold text-white">Mural de Avisos</h3>
+                        ${htmlAvisos(appState.avisos)}
+                    </div>
+                </div>
+            `;
+
+            setMenu([
+                {id: 'resumo', label: 'Boletim & Horários'},
+                {id: 'atividades', label: 'Atividades das Turmas'},
+                {id: 'calendario', label: 'Calendário Acadêmico'},
+                {id: 'atestados', label: 'Atestados Médicos'},
+                {id: 'requerimentos', label: 'Requerimentos'},
+                {id: 'avisos', label: 'Mural de Avisos'}
+            ], secao);
+        }
+
+        async function entregarAtividadeAluno(e, ativId) {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('comentario', document.getElementById(`ent-com-${ativId}`).value);
+            const f = document.getElementById(`ent-file-${ativId}`);
+            if (f.files.length > 0) fd.append('arquivo', f.files[0]);
+            await acao(() => api(`/api/aluno/atividades/${ativId}/entregar`, {method: 'POST', body: fd}), 'Atividade entregue com sucesso!', 'atividades');
+        }
+
+        async function enviarAtestadoAluno(e) {
+            e.preventDefault();
+            const fd = new FormData();
+            fd.append('data_inicio', document.getElementById('ats-data').value);
+            fd.append('dias', document.getElementById('ats-dias').value);
+            fd.append('motivo', document.getElementById('ats-motivo').value);
+            fd.append('arquivo', document.getElementById('ats-file').files[0]);
+            await acao(() => api('/api/aluno/atestados', {method: 'POST', body: fd}), 'Atestado protocolado com sucesso!', 'atestados');
+        }
+
+        async function abrirRequerimento(e) {
+            e.preventDefault();
+            await acao(() => jpost('/api/aluno/requerimentos', {
+                tipo: document.getElementById('rq-tipo').value,
+                justificativa: document.getElementById('rq-just').value
+            }), 'Requerimento protocolado com sucesso!', 'requerimentos');
+        }
+
+        async function emitirDeclaracaoAluno() {
+            await acao(async () => {
+                const d = await api('/api/aluno/declaracao');
+                mostrarModalDeclaracao(d);
+            });
+        }
+
+        function toggleChat(force) {
+            const w = document.getElementById('chat-widget');
+            const open = force !== undefined ? force : w.classList.contains('hidden');
+            w.classList.toggle('hidden', !open);
+            w.classList.toggle('flex', open);
+            if (open) document.getElementById('chat-input').focus();
+        }
+
+        function addChatMsg(texto, doUsuario) {
+            const box = document.getElementById('chat-messages');
+            const el = document.createElement('div');
+            el.className = doUsuario
+                ? 'bg-emerald-600/20 border border-emerald-500/30 p-3 rounded-xl max-w-[85%] ml-auto text-right text-emerald-100'
+                : 'bg-zinc-800 border border-zinc-700 p-3 rounded-xl max-w-[85%] text-zinc-200';
+            el.textContent = texto;
+            box.appendChild(el);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function enviarChat() {
+            const inp = document.getElementById('chat-input');
+            const msg = inp.value.trim();
+            if (!msg) return;
+            addChatMsg(msg, true);
+            inp.value = '';
+            try {
+                const data = await jpost('/api/chat', {message: msg});
+                addChatMsg(data.reply, false);
+            } catch (e) {
+                addChatMsg('Não consegui responder agora. Tente novamente em instantes.', false);
+            }
+        }
+
+        inicializarApp();
+    </script>
+</body>
+</html>
